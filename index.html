@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#1A1B22">
+<title>Cadastro de Visitas — Feira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1A1B22;
+    --paper:#EFF0EA;
+    --paper-dim:#E3E4DC;
+    --amber:#F2A93B;
+    --cobalt:#2D4FFF;
+    --green:#2FAE66;
+    --red:#E14B4B;
+    --safe-t:env(safe-area-inset-top);
+    --safe-b:env(safe-area-inset-bottom);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--ink);}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+    overscroll-behavior-y:none;
+  }
+  .app{
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    background:var(--ink);
+  }
+
+  /* ---------- Cabeçalho / ticket ---------- */
+  .ticket-head{
+    padding:calc(14px + var(--safe-t)) 20px 0;
+    background:var(--ink);
+    color:var(--paper);
+    flex-shrink:0;
+  }
+  .ticket-head .brand{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .ticket-head .brand h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(18px,5vw,22px);
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .ticket-head .count{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:14px;
+    color:var(--amber);
+    white-space:nowrap;
+  }
+  .dots{
+    display:flex;
+    gap:6px;
+    margin-top:12px;
+  }
+  .dots span{
+    height:4px;
+    flex:1;
+    background:rgba(255,255,255,0.18);
+    border-radius:2px;
+    overflow:hidden;
+    position:relative;
+  }
+  .dots span::after{
+    content:'';
+    position:absolute;inset:0;
+    background:var(--amber);
+    transform:scaleX(0);
+    transform-origin:left;
+    transition:transform .35s ease;
+  }
+  .dots span.done::after{transform:scaleX(1);background:var(--green);}
+  .dots span.active::after{transform:scaleX(1);background:var(--amber);}
+
+  /* perfuração estilo ticket */
+  .perforation{
+    position:relative;
+    height:18px;
+    margin-top:12px;
+  }
+  .perforation::before{
+    content:'';
+    position:absolute;
+    left:0;right:0;top:9px;
+    border-top:2px dashed rgba(255,255,255,0.25);
+  }
+  .perforation i{
+    position:absolute;
+    top:0;width:18px;height:18px;
+    background:var(--ink);
+    border-radius:50%;
+  }
+  .perforation i.l{left:-9px;}
+  .perforation i.r{right:-9px;}
+
+  /* ---------- Deck de cards ---------- */
+  .deck{
+    flex:1;
+    display:flex;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    background:var(--paper);
+    border-top-left-radius:22px;
+    border-top-right-radius:22px;
+    scrollbar-width:none;
+  }
+  .deck::-webkit-scrollbar{display:none;}
+
+  .card{
+    scroll-snap-align:start;
+    flex:0 0 100%;
+    width:100%;
+    height:100%;
+    padding:28px 22px 24px;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+  }
+
+  .card .tag{
+    align-self:flex-start;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.06em;
+    color:var(--ink);
+    background:var(--paper-dim);
+    border:1.5px dashed var(--ink);
+    border-radius:999px;
+    padding:5px 12px;
+    margin-bottom:18px;
+  }
+  .card h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(26px,8vw,34px);
+    line-height:1.1;
+    margin:0 0 8px;
+    letter-spacing:-0.02em;
+  }
+  .card p.sub{
+    margin:0 0 26px;
+    font-size:15px;
+    color:#5A5C52;
+    line-height:1.4;
+  }
+
+  input[type=text],input[type=tel],textarea{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:20px;
+    font-weight:500;
+    padding:16px 16px;
+    border-radius:14px;
+    border:2px solid #D8D9CE;
+    background:#FFFFFF;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s;
+  }
+  input::placeholder,textarea::placeholder{color:#A8A99B;}
+  input:focus,textarea:focus{border-color:var(--cobalt);}
+  textarea{resize:vertical;min-height:120px;line-height:1.4;}
+
+  .field-error input,.field-error textarea{border-color:var(--red);}
+  .error-msg{
+    display:none;
+    color:var(--red);
+    font-size:13px;
+    font-weight:600;
+    margin-top:8px;
+  }
+  .field-error .error-msg{display:block;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-2px)}
+    20%,80%{transform:translateX(4px)}
+    30%,50%,70%{transform:translateX(-8px)}
+    40%,60%{transform:translateX(8px)}
+  }
+  .shake{animation:shake .5s;}
+
+  /* ---------- Telefones ---------- */
+  .phone-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .phone-row input{flex:1;}
+  .btn-icon{
+    flex-shrink:0;
+    width:52px;height:52px;
+    border-radius:14px;
+    border:2px solid #D8D9CE;
+    background:#fff;
+    font-size:22px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .btn-icon.remove{color:var(--red);border-color:#F0C7C7;}
+  .add-phone{
+    display:flex;align-items:center;gap:8px;
+    background:none;border:none;
+    color:var(--cobalt);
+    font-weight:700;
+    font-size:15px;
+    padding:10px 4px;
+    cursor:pointer;
+    align-self:flex-start;
+  }
+  .add-phone .plus{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--cobalt);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;line-height:1;
+  }
+
+  /* ---------- Áudio ---------- */
+  .audio-box{
+    margin-top:16px;
+    padding:16px;
+    border:2px dashed #C9CABC;
+    border-radius:16px;
+    background:#F7F7F1;
+  }
+  .audio-box .row{
+    display:flex;align-items:center;gap:14px;
+  }
+  .mic-btn{
+    width:58px;height:58px;
+    border-radius:50%;
+    border:none;
+    background:var(--cobalt);
+    color:#fff;
+    font-size:24px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:background .15s, transform .15s;
+  }
+  .mic-btn.recording{
+    background:var(--red);
+    animation:pulse 1.2s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(225,75,75,.45);}
+    70%{box-shadow:0 0 0 14px rgba(225,75,75,0);}
+    100%{box-shadow:0 0 0 0 rgba(225,75,75,0);}
+  }
+  .mic-btn svg{width:24px;height:24px;display:block;}
+  .mic-btn .stop-icon{
+    width:16px;height:16px;
+    background:#fff;
+    border-radius:4px;
+  }
+
+  /* barras de onda estilo Claude, ativas durante a gravação */
+  .waveform{
+    display:none;
+    align-items:center;
+    gap:3px;
+    height:22px;
+  }
+  .waveform.active{display:flex;}
+  .waveform span{
+    width:3px;
+    border-radius:3px;
+    background:var(--red);
+    animation:wave 1s ease-in-out infinite;
+  }
+  .waveform span:nth-child(1){height:8px;animation-delay:-0.9s;}
+  .waveform span:nth-child(2){height:16px;animation-delay:-0.6s;}
+  .waveform span:nth-child(3){height:22px;animation-delay:-0.3s;}
+  .waveform span:nth-child(4){height:14px;animation-delay:-0.75s;}
+  .waveform span:nth-child(5){height:19px;animation-delay:-0.45s;}
+  .waveform span:nth-child(6){height:10px;animation-delay:-0.15s;}
+  @keyframes wave{
+    0%,100%{transform:scaleY(0.35);}
+    50%{transform:scaleY(1);}
+  }
+  .audio-status{
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    font-weight:700;
+  }
+  .audio-status small{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-weight:400;
+    color:#7A7B6E;
+    font-size:12px;
+    margin-top:2px;
+  }
+  .audio-player{
+    margin-top:12px;
+    width:100%;
+  }
+  .audio-actions{
+    display:flex;gap:10px;margin-top:10px;
+  }
+  .link-btn{
+    background:none;border:none;
+    color:var(--red);
+    font-weight:700;
+    font-size:13px;
+    padding:4px;
+    cursor:pointer;
+  }
+  .audio-hint{font-size:12px;color:#7A7B6E;margin-top:8px;}
+
+  /* ---------- Revisão ---------- */
+  .review-item{
+    padding:14px 0;
+    border-bottom:1px solid #DEDFD3;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    cursor:pointer;
+    border-radius:10px;
+    transition:background .12s;
+  }
+  .review-item:active{background:#E4E5D9;}
+  .review-item .text-col{flex:1;min-width:0;}
+  .review-item .edit-chevron{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    font-weight:700;
+    color:var(--cobalt);
+    letter-spacing:.04em;
+  }
+  .review-item .edit-chevron svg{width:14px;height:14px;}
+  .review-item .lbl{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.06em;
+    color:#8C8D7F;
+    text-transform:uppercase;
+  }
+  .review-item .val{
+    font-size:17px;
+    font-weight:600;
+    margin-top:4px;
+    word-break:break-word;
+  }
+  .review-item .val.empty{color:#B4B5A6;font-weight:500;}
+
+  /* ---------- Sucesso ---------- */
+  .success-box{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:14px;
+  }
+  .success-box .check{
+    width:74px;height:74px;border-radius:50%;
+    background:var(--green);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:36px;
+  }
+
+  /* ---------- Navegação ---------- */
+  .controls{
+    flex-shrink:0;
+    display:flex;
+    gap:10px;
+    padding:14px 20px calc(16px + var(--safe-b));
+    background:var(--paper);
+  }
+  .btn{
+    flex:1;
+    border:none;
+    border-radius:16px;
+    padding:17px 16px;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:17px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-ghost{
+    background:transparent;
+    border:2px solid #D8D9CE;
+    color:var(--ink);
+    flex:0 0 96px;
+  }
+  .btn-primary{
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .btn-primary:disabled{opacity:.5;}
+  .btn-submit{
+    background:var(--amber);
+    color:var(--ink);
+  }
+  .btn:active{transform:scale(0.98);}
+  .submit-error{
+    color:var(--red);
+    font-size:13px;
+    font-weight:600;
+    text-align:center;
+    margin:0 20px 8px;
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="ticket-head">
+    <div class="brand">
+      <h1>Cadastro de Visitas</h1>
+      <span class="count" id="countLabel">01 / 05</span>
+    </div>
+    <div class="dots" id="dots"></div>
+    <div class="perforation"><i class="l"></i><i class="r"></i></div>
+  </div>
+
+  <main class="deck" id="deck">
+
+    <!-- CARD 1 — Nome -->
+    <section class="card" data-field="nome" id="card-nome">
+      <span class="tag">01 · VISITANTE</span>
+      <h2>Qual o nome do visitante?</h2>
+      <p class="sub">Nome completo de quem passou pelo estande.</p>
+      <input type="text" id="inputNome" placeholder="Ex: Ana Ribeiro" autocomplete="name">
+      <div class="error-msg">Preencha o nome para continuar.</div>
+    </section>
+
+    <!-- CARD 2 — Empresa -->
+    <section class="card" data-field="empresa" id="card-empresa">
+      <span class="tag">02 · EMPRESA</span>
+      <h2>Empresa ou instituição?</h2>
+      <p class="sub">Se for autônomo ou não souber, pode deixar em branco.</p>
+      <input type="text" id="inputEmpresa" placeholder="Ex: Fiorella Distribuidora" autocomplete="organization">
+    </section>
+
+    <!-- CARD 3 — Telefones -->
+    <section class="card" data-field="telefones" id="card-telefones">
+      <span class="tag">03 · CONTATO</span>
+      <h2>Telefone de contato</h2>
+      <p class="sub">Adicione quantos números forem necessários.</p>
+      <div id="phoneList"></div>
+      <button type="button" class="add-phone" id="addPhoneBtn">
+        <span class="plus">+</span> Adicionar outro número
+      </button>
+      <div class="error-msg" id="phoneError">Adicione ao menos um telefone.</div>
+    </section>
+
+    <!-- CARD 4 — Observações -->
+    <section class="card" data-field="observacoes" id="card-observacoes">
+      <span class="tag">04 · OBSERVAÇÕES</span>
+      <h2>Alguma observação?</h2>
+      <p class="sub">Escreva ou grave um áudio rápido sobre a conversa.</p>
+      <textarea id="inputObs" placeholder="Ex: interessado na linha premium, pediu orçamento..."></textarea>
+
+      <div class="audio-box">
+        <div class="row">
+          <button type="button" class="mic-btn" id="micBtn" aria-label="Gravar áudio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="micIcon">
+              <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+              <line x1="12" y1="18" x2="12" y2="22"/>
+              <line x1="9" y1="22" x2="15" y2="22"/>
+            </svg>
+          </button>
+          <div class="audio-status">
+            <span id="audioStatusText">Gravar áudio</span>
+            <small id="audioStatusSub">Toque no microfone para começar</small>
+          </div>
+          <div class="waveform" id="waveform">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <audio class="audio-player" id="audioPlayer" controls style="display:none"></audio>
+        <div class="audio-actions" id="audioActions" style="display:none">
+          <button type="button" class="link-btn" id="reRecordBtn">Regravar</button>
+          <button type="button" class="link-btn" id="deleteAudioBtn">Excluir áudio</button>
+        </div>
+        <div class="audio-hint" id="audioHint">O áudio é enviado junto com o cadastro.</div>
+      </div>
+    </section>
+
+    <!-- CARD 5 — Revisão -->
+    <section class="card" data-field="revisao" id="card-revisao">
+      <span class="tag">05 · CONFIRMAR</span>
+      <h2>Confira antes de enviar</h2>
+      <p class="sub">Toque em "Cadastrar" para salvar esta visita.</p>
+
+      <div class="review-item" data-target="card-nome">
+        <div class="text-col">
+          <div class="lbl">Nome</div>
+          <div class="val" id="revNome">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-empresa">
+        <div class="text-col">
+          <div class="lbl">Empresa</div>
+          <div class="val" id="revEmpresa">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-telefones">
+        <div class="text-col">
+          <div class="lbl">Telefones</div>
+          <div class="val" id="revTelefones">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-observacoes">
+        <div class="text-col">
+          <div class="lbl">Observações</div>
+          <div class="val" id="revObs">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-observacoes">
+        <div class="text-col">
+          <div class="lbl">Áudio</div>
+          <div class="val" id="revAudio">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD 6 — Sucesso (oculto até envio) -->
+    <section class="card" data-field="sucesso" id="card-sucesso" style="display:none">
+      <div class="success-box">
+        <div class="check">✓</div>
+        <h2 style="margin:0">Visita cadastrada!</h2>
+        <p class="sub" style="margin:0">Os dados foram enviados com sucesso.</p>
+        <button type="button" class="btn btn-primary" id="newVisitBtn" style="margin-top:10px;padding:14px 26px;flex:none">Cadastrar nova visita</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="submit-error" id="submitError"></div>
+  <div class="controls" id="controls">
+    <button type="button" class="btn btn-ghost" id="backBtn">← Voltar</button>
+    <button type="button" class="btn btn-primary" id="nextBtn">Avançar →</button>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* ======================================================
+   CONFIGURAÇÃO DO SUPABASE
+   Troque pelos dados do seu projeto (Settings > API).
+   ====================================================== */
+const SUPABASE_URL = 'COLE_AQUI_A_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'COLE_AQUI_A_SUPABASE_ANON_KEY';
+const AUDIO_BUCKET = 'observacoes-audio'; // bucket público de Storage
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------------- Estado ---------------- */
+const state = {
+  audioBlob: null,
+  mediaRecorder: null,
+  chunks: [],
+  recording: false,
+};
+
+const deck = document.getElementById('deck');
+const cards = () => Array.from(deck.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
+const dotsEl = document.getElementById('dots');
+const countLabel = document.getElementById('countLabel');
+const backBtn = document.getElementById('backBtn');
+const nextBtn = document.getElementById('nextBtn');
+const controls = document.getElementById('controls');
+const submitError = document.getElementById('submitError');
+
+let current = 0;
+
+function buildDots(){
+  dotsEl.innerHTML = '';
+  cards().forEach(() => {
+    const s = document.createElement('span');
+    dotsEl.appendChild(s);
+  });
+}
+buildDots();
+
+function updateChrome(){
+  const list = cards();
+  const total = list.length;
+  countLabel.textContent = String(current + 1).padStart(2,'0') + ' / ' + String(total).padStart(2,'0');
+  Array.from(dotsEl.children).forEach((d,i) => {
+    d.classList.toggle('done', i < current);
+    d.classList.toggle('active', i === current);
+  });
+  backBtn.style.visibility = current === 0 ? 'hidden' : 'visible';
+  const isReview = list[current].id === 'card-revisao';
+  const isSuccess = list[current].id === 'card-sucesso';
+  if(isSuccess){
+    controls.style.display = 'none';
+  } else {
+    controls.style.display = 'flex';
+    nextBtn.textContent = isReview ? 'Cadastrar ✓' : 'Avançar →';
+    nextBtn.className = 'btn ' + (isReview ? 'btn-submit' : 'btn-primary');
+  }
+}
+
+function goTo(index){
+  const list = cards();
+  index = Math.max(0, Math.min(index, list.length - 1));
+  current = index;
+  list[current].scrollIntoView({behavior:'smooth', inline:'start', block:'nearest'});
+  updateChrome();
+}
+
+// mantém o estado sincronizado ao arrastar/deslizar manualmente
+let scrollTimeout;
+deck.addEventListener('scroll', () => {
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    const list = cards();
+    const idx = list.findIndex(c => Math.abs(c.getBoundingClientRect().left - deck.getBoundingClientRect().left) < 20);
+    if(idx !== -1 && idx !== current){
+      current = idx;
+      updateChrome();
+    }
+  }, 90);
+});
+
+function showFieldError(cardEl, show){
+  cardEl.classList.
