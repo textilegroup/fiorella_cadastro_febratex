@@ -878,15 +878,51 @@
 <script type="module">
 /* ======================================================
    CONFIGURAÇÃO DO SUPABASE
-   Troque pelos dados do seu projeto (Settings > API).
+   Cole aqui a URL e a chave do SEU projeto Supabase
+   (Settings > API). Antes disso, rode o script SQL abaixo
+   UMA vez no seu projeto (menu SQL Editor > New query):
+
+   -- Tabela de cadastros da feira
+   create table if not exists public.visitas (
+     id uuid primary key default gen_random_uuid(),
+     nome text not null,
+     empresa text,
+     telefones text[] not null default '{}',
+     email text,
+     observacoes text,
+     audio_url text,
+     fotos_urls text[] default '{}',
+     criado_em timestamptz not null default now()
+   );
+
+   alter table public.visitas enable row level security;
+
+   create policy "insercao publica" on public.visitas
+     for insert to anon with check (true);
+   create policy "leitura publica" on public.visitas
+     for select to anon using (true);
+   create policy "exclusao publica" on public.visitas
+     for delete to anon using (true);
+
+   -- Bucket único para áudios e fotos (cria automaticamente,
+   -- sem precisar ir na aba Storage clicar em nada)
+   insert into storage.buckets (id, name, public)
+   values ('visitas-arquivos', 'visitas-arquivos', true)
+   on conflict (id) do nothing;
+
+   create policy "upload publico visitas-arquivos" on storage.objects
+     for insert to anon with check (bucket_id = 'visitas-arquivos');
+   create policy "leitura publica visitas-arquivos" on storage.objects
+     for select to anon using (bucket_id = 'visitas-arquivos');
+
    O restante do formulário funciona normalmente mesmo
    antes de configurar isso — o erro só aparece ao tentar
    enviar (Cadastrar), para não travar o resto da página.
    ====================================================== */
-const SUPABASE_URL = 'COLE_AQUI_A_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'COLE_AQUI_A_SUPABASE_ANON_KEY';
-const AUDIO_BUCKET = 'observacoes-audio'; // bucket público de Storage
-const PHOTO_BUCKET = 'fotos-cartoes'; // bucket público de Storage para fotos de cartões
+const SUPABASE_URL = 'https://eepmlsdbtcvsjxdcvimi.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_048Dv-jRALn34Ythhj9ngA_fZ1gsNI_';
+const AUDIO_BUCKET = 'visitas-arquivos'; // bucket único de Storage (áudios em /audio, fotos em /fotos)
+const PHOTO_BUCKET = 'visitas-arquivos';
 
 // Senha da área administrativa (acesse com ?admin no final do link do site).
 // Atenção: essa é apenas uma trava visual da página — não é segurança de
@@ -1448,7 +1484,7 @@ async function submitVisit(){
     const fotos_urls = [];
 
     if(state.audioBlob){
-      const fileName = `visita-${Date.now()}.webm`;
+      const fileName = `audio/visita-${Date.now()}.webm`;
       const { error: upErr } = await client.storage
         .from(AUDIO_BUCKET)
         .upload(fileName, state.audioBlob, { contentType: 'audio/webm' });
@@ -1458,7 +1494,7 @@ async function submitVisit(){
     }
 
     for(const p of state.photos){
-      const fileName = `foto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+      const fileName = `fotos/foto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
       const { error: upErr } = await client.storage
         .from(PHOTO_BUCKET)
         .upload(fileName, p.blob, { contentType: 'image/jpeg' });
