@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#1A1B22">
+<title>Cadastro de Visitas — Feira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2A1315;
+    --paper:#FFFFFF;
+    --paper-dim:#F3E3E2;
+    --red-dark:#5C1414;
+    --red:#8C2328;
+    --red-light:#F3E3E2;
+    --success-green:#1E7A46;
+    --safe-t:env(safe-area-inset-top);
+    --safe-b:env(safe-area-inset-bottom);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--ink);}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+    overscroll-behavior-y:none;
+  }
+  .app{
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    background:var(--ink);
+  }
+
+  /* ---------- Cabeçalho / ticket ---------- */
+  .ticket-head{
+    padding:calc(14px + var(--safe-t)) 20px 0;
+    background:var(--ink);
+    color:var(--paper);
+    flex-shrink:0;
+  }
+  .ticket-head .brand{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .ticket-head .brand h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(18px,5vw,22px);
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .ticket-head .count{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:14px;
+    color:var(--red);
+    white-space:nowrap;
+  }
+  .dots{
+    display:flex;
+    gap:6px;
+    margin-top:12px;
+  }
+  .dots span{
+    height:4px;
+    flex:1;
+    background:rgba(255,255,255,0.18);
+    border-radius:2px;
+    overflow:hidden;
+    position:relative;
+  }
+  .dots span::after{
+    content:'';
+    position:absolute;inset:0;
+    background:var(--red);
+    transform:scaleX(0);
+    transform-origin:left;
+    transition:transform .35s ease;
+  }
+  .dots span.done::after{transform:scaleX(1);background:var(--red-dark);}
+  .dots span.active::after{transform:scaleX(1);background:var(--red);}
+
+  /* perfuração estilo ticket */
+  .perforation{
+    position:relative;
+    height:18px;
+    margin-top:12px;
+  }
+  .perforation::before{
+    content:'';
+    position:absolute;
+    left:0;right:0;top:9px;
+    border-top:2px dashed rgba(255,255,255,0.25);
+  }
+  .perforation i{
+    position:absolute;
+    top:0;width:18px;height:18px;
+    background:var(--ink);
+    border-radius:50%;
+  }
+  .perforation i.l{left:-9px;}
+  .perforation i.r{right:-9px;}
+
+  /* ---------- Deck de cards ---------- */
+  .deck{
+    flex:1;
+    display:flex;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    background:var(--paper);
+    border-top-left-radius:22px;
+    border-top-right-radius:22px;
+    scrollbar-width:none;
+  }
+  .deck::-webkit-scrollbar{display:none;}
+
+  .card{
+    scroll-snap-align:start;
+    flex:0 0 100%;
+    width:100%;
+    height:100%;
+    padding:28px 22px 24px;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+  }
+
+  .card .step{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+    min-width:0;
+  }
+  .card .step-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .card .step-row .step{margin-bottom:0;flex:1;min-width:0;}
+  .card .step-actions{
+    display:flex;
+    gap:8px;
+    flex-shrink:0;
+  }
+  .card .step .num{
+    flex-shrink:0;
+    width:34px;height:34px;
+    border-radius:50%;
+    background:var(--red-dark);
+    color:#fff;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:15px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .card .step .label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.08em;
+    color:var(--red-dark);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .card .step .label small{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    letter-spacing:0;
+    color:#8A5654;
+    font-size:11px;
+    margin-top:1px;
+  }
+  .card h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(26px,8vw,34px);
+    line-height:1.1;
+    margin:0 0 8px;
+    letter-spacing:-0.02em;
+  }
+  .card p.sub{
+    margin:0 0 26px;
+    font-size:15px;
+    color:#7A4442;
+    line-height:1.4;
+  }
+
+  input[type=text],input[type=tel],textarea{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:20px;
+    font-weight:500;
+    padding:16px 16px;
+    border-radius:14px;
+    border:2px solid #E3CFCE;
+    background:#FFFFFF;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s;
+  }
+  input::placeholder,textarea::placeholder{color:#B98A88;}
+  input:focus,textarea:focus{border-color:var(--red);}
+  textarea{resize:vertical;min-height:120px;line-height:1.4;}
+
+  .field-error input,.field-error textarea{border-color:var(--red);}
+  .error-msg{
+    display:none;
+    color:var(--red);
+    font-size:13px;
+    font-weight:600;
+    margin-top:8px;
+  }
+  .field-error .error-msg{display:block;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-2px)}
+    20%,80%{transform:translateX(4px)}
+    30%,50%,70%{transform:translateX(-8px)}
+    40%,60%{transform:translateX(8px)}
+  }
+  .shake{animation:shake .5s;}
+
+  /* ---------- Telefones ---------- */
+  .phone-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .phone-row input{flex:1;}
+  .btn-icon{
+    flex-shrink:0;
+    width:52px;height:52px;
+    border-radius:14px;
+    border:2px solid #E3CFCE;
+    background:#fff;
+    font-size:22px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .btn-icon.remove{color:var(--red);border-color:#E8B9B7;}
+  .add-phone{
+    display:flex;align-items:center;gap:8px;
+    background:none;border:none;
+    color:var(--red);
+    font-weight:700;
+    font-size:15px;
+    padding:10px 4px;
+    cursor:pointer;
+    align-self:flex-start;
+  }
+  .add-phone .plus{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--red);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;line-height:1;
+  }
+
+  /* ---------- Botões quadrados compactos (mic, transcrever, câmera) ---------- */
+  .mic-square,.transcribe-square,.camera-square{
+    width:44px;height:44px;
+    flex-shrink:0;
+    border-radius:12px;
+    border:none;
+    background:var(--red);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:background .15s, transform .15s;
+  }
+  .mic-square.recording,.transcribe-square.listening{
+    background:var(--red-dark);
+    animation:pulse 1.2s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(92,20,20,.45);}
+    70%{box-shadow:0 0 0 10px rgba(92,20,20,0);}
+    100%{box-shadow:0 0 0 0 rgba(92,20,20,0);}
+  }
+  .mic-square svg,.transcribe-square svg,.camera-square svg{width:20px;height:20px;display:block;}
+
+  /* ---------- Fotos: tira de miniaturas ---------- */
+  .photo-strip{
+    display:none;
+    gap:8px;
+    overflow-x:auto;
+    padding:2px 2px 10px;
+  }
+  .photo-strip.has-photos{display:flex;}
+  .photo-thumb{
+    position:relative;
+    flex-shrink:0;
+    width:52px;height:52px;
+    border-radius:10px;
+    overflow:hidden;
+    border:2px solid #E3CFCE;
+  }
+  .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-thumb .rm{
+    position:absolute;top:2px;right:2px;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--red-dark);
+    color:#fff;
+    font-size:11px;
+    line-height:18px;
+    text-align:center;
+    cursor:pointer;
+  }
+
+  .audio-status-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:10px;
+    margin-bottom:10px;
+  }
+
+  /* barras de onda estilo Claude, ativas durante a gravação */
+  .waveform{
+    display:none;
+    align-items:center;
+    gap:3px;
+    height:20px;
+  }
+  .waveform.active{display:flex;}
+  .waveform span{
+    width:3px;
+    border-radius:3px;
+    background:var(--red);
+    animation:wave 1s ease-in-out infinite;
+  }
+  .waveform span:nth-child(1){height:7px;animation-delay:-0.9s;}
+  .waveform span:nth-child(2){height:14px;animation-delay:-0.6s;}
+  .waveform span:nth-child(3){height:20px;animation-delay:-0.3s;}
+  .waveform span:nth-child(4){height:12px;animation-delay:-0.75s;}
+  .waveform span:nth-child(5){height:17px;animation-delay:-0.45s;}
+  .waveform span:nth-child(6){height:9px;animation-delay:-0.15s;}
+  @keyframes wave{
+    0%,100%{transform:scaleY(0.35);}
+    50%{transform:scaleY(1);}
+  }
+  .audio-status{
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    font-weight:700;
+  }
+  .audio-status small{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-weight:400;
+    color:#8A5654;
+    font-size:11px;
+    margin-top:1px;
+  }
+  .audio-result{
+    padding:10px 12px;
+    border:2px dashed #E3CFCE;
+    border-radius:14px;
+    background:#FBF3F2;
+    margin-bottom:14px;
+  }
+  .audio-player{
+    width:100%;
+    height:34px;
+  }
+  .audio-actions{
+    display:flex;gap:14px;margin-top:8px;
+  }
+  .link-btn{
+    background:none;border:none;
+    color:var(--red);
+    font-weight:700;
+    font-size:13px;
+    padding:4px;
+    cursor:pointer;
+  }
+
+  /* Card de observações: tudo visível de uma vez, sem rolagem */
+  #card-observacoes{overflow-y:hidden;}
+  #card-observacoes .sub{margin-bottom:14px;}
+  #card-observacoes textarea{
+    flex:1 1 auto;
+    min-height:56px;
+  }
+  @media (max-height:680px){
+    #card-observacoes h2{font-size:20px;}
+    #card-observacoes .sub{margin-bottom:8px;font-size:13px;}
+    #card-observacoes textarea{min-height:42px;padding:12px;font-size:17px;}
+    #card-observacoes .audio-status-line{margin-top:6px;margin-bottom:6px;}
+    #card-observacoes .mic-square,
+    #card-observacoes .transcribe-square,
+    #card-observacoes .camera-square{width:38px;height:38px;border-radius:10px;}
+    #card-observacoes .mic-square svg,
+    #card-observacoes .transcribe-square svg,
+    #card-observacoes .camera-square svg{width:17px;height:17px;}
+  }
+
+  /* ---------- Revisão ---------- */
+  .review-item{
+    padding:14px 0;
+    border-bottom:1px solid #EBD8D7;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    cursor:pointer;
+    border-radius:10px;
+    transition:background .12s;
+  }
+  .review-item:active{background:#F3E3E2;}
+  .review-item .text-col{flex:1;min-width:0;}
+  .review-item .edit-chevron{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    font-weight:700;
+    color:var(--red);
+    letter-spacing:.04em;
+  }
+  .review-item .edit-chevron svg{width:14px;height:14px;}
+  .review-item .lbl{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.06em;
+    color:#8A5654;
+    text-transform:uppercase;
+  }
+  .review-item .val{
+    font-size:17px;
+    font-weight:600;
+    margin-top:4px;
+    word-break:break-word;
+  }
+  .review-item .val.empty{color:#C79A98;font-weight:500;}
+
+  /* ---------- Sucesso ---------- */
+  .success-box{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:14px;
+  }
+  .success-box .check{
+    width:74px;height:74px;border-radius:50%;
+    background:var(--red);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:36px;
+  }
+
+  /* ---------- Navegação ---------- */
+  /* Fica no fluxo normal do layout (não fixed) para garantir que os
+     botões sempre renderizem — position:fixed some em alguns
+     navegadores/webviews móveis quando combinado com 100dvh. */
+  .bottom-bar{
+    flex-shrink:0;
+    background:var(--paper);
+    transition:transform .12s ease-out;
+  }
+  .controls{
+    flex-shrink:0;
+    display:flex;
+    gap:10px;
+    padding:14px 20px calc(16px + var(--safe-b));
+  }
+  .btn{
+    flex:1;
+    border:none;
+    border-radius:16px;
+    padding:17px 16px;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:17px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-ghost{
+    background:transparent;
+    border:2px solid var(--red);
+    color:var(--red);
+    flex:0 0 96px;
+  }
+  .btn-primary{
+    background:var(--red);
+    color:#fff;
+  }
+  .btn-primary:disabled{opacity:.5;}
+  .btn-final{
+    background:var(--success-green);
+    color:#fff;
+  }
+  .btn:active{transform:scale(0.98);}
+  .submit-error{
+    color:var(--red);
+    font-size:13px;
+    font-weight:600;
+    text-align:center;
+    margin:0 20px 8px;
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="ticket-head">
+    <div class="brand">
+      <h1>Cadastro de Visitas</h1>
+      <span class="count" id="countLabel">01 / 06</span>
+    </div>
+    <div class="dots" id="dots"></div>
+    <div class="perforation"><i class="l"></i><i class="r"></i></div>
+  </div>
+
+  <main class="deck" id="deck">
+
+    <!-- CARD 1 — Nome -->
+    <section class="card" data-field="nome" id="card-nome">
+      <div class="step-row">
+        <div class="step"><span class="num">1</span><span class="label">Etapa 1 de 6<small>Visitante</small></span></div>
+        <div class="step-actions">
+          <button type="button" class="camera-square" data-camera aria-label="Tirar foto do cartão">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="photo-strip" data-photostrip></div>
+      <h2>Qual o nome do visitante?</h2>
+      <p class="sub">Nome completo de quem passou pelo estande.</p>
+      <input type="text" id="inputNome" placeholder="Ex: Ana Ribeiro" autocomplete="name">
+      <div class="error-msg">Preencha o nome para continuar.</div>
+    </section>
+
+    <!-- CARD 2 — Empresa -->
+    <section class="card" data-field="empresa" id="card-empresa">
+      <div class="step-row">
+        <div class="step"><span class="num">2</span><span class="label">Etapa 2 de 6<small>Empresa</small></span></div>
+        <div class="step-actions">
+          <button type="button" class="camera-square" data-camera aria-label="Tirar foto do cartão">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="photo-strip" data-photostrip></div>
+      <h2>Empresa ou instituição?</h2>
+      <p class="sub">Se for autônomo ou não souber, pode deixar em branco.</p>
+      <input type="text" id="inputEmpresa" placeholder="Ex: Fiorella Distribuidora" autocomplete="organization">
+    </section>
+
+    <!-- CARD 3 — Telefones -->
+    <section class="card" data-field="telefones" id="card-telefones">
+      <div class="step-row">
+        <div class="step"><span class="num">3</span><span class="label">Etapa 3 de 6<small>Contato</small></span></div>
+        <div class="step-actions">
+          <button type="button" class="camera-square" data-camera aria-label="Tirar foto do cartão">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="photo-strip" data-photostrip></div>
+      <h2>Telefone de contato</h2>
+      <p class="sub">Adicione quantos números forem necessários.</p>
+      <div id="phoneList"></div>
+      <button type="button" class="add-phone" id="addPhoneBtn">
+        <span class="plus">+</span> Adicionar outro número
+      </button>
+      <div class="error-msg" id="phoneError">Adicione ao menos um telefone.</div>
+    </section>
+
+    <!-- CARD 4 — E-mail -->
+    <section class="card" data-field="email" id="card-email">
+      <div class="step-row">
+        <div class="step"><span class="num">4</span><span class="label">Etapa 4 de 6<small>E-mail</small></span></div>
+        <div class="step-actions">
+          <button type="button" class="camera-square" data-camera aria-label="Tirar foto do cartão">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="photo-strip" data-photostrip></div>
+      <h2>Qual o e-mail?</h2>
+      <p class="sub">Opcional — pode deixar em branco se não tiver.</p>
+      <input type="email" id="inputEmail" placeholder="Ex: ana@empresa.com.br" autocomplete="email" inputmode="email">
+    </section>
+
+    <!-- CARD 5 — Observações -->
+    <section class="card" data-field="observacoes" id="card-observacoes">
+      <div class="step-row">
+        <div class="step"><span class="num">5</span><span class="label">Etapa 5 de 6<small>Observações</small></span></div>
+        <div class="step-actions">
+          <button type="button" class="mic-square" id="micBtn" aria-label="Gravar áudio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="micIcon">
+              <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+              <line x1="12" y1="18" x2="12" y2="22"/>
+              <line x1="9" y1="22" x2="15" y2="22"/>
+            </svg>
+          </button>
+          <button type="button" class="transcribe-square" id="transcribeBtn" aria-label="Transcrever áudio em texto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/></svg>
+          </button>
+          <button type="button" class="camera-square" data-camera aria-label="Tirar foto do cartão">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="photo-strip" data-photostrip></div>
+
+      <div class="audio-status-line">
+        <div class="audio-status">
+          <span id="audioStatusText">Gravar áudio</span>
+          <small id="audioStatusSub">Quadrado grava · balão transcreve em texto</small>
+        </div>
+        <div class="waveform" id="waveform">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div class="audio-result" id="audioResult" style="display:none">
+        <audio class="audio-player" id="audioPlayer" controls></audio>
+        <div class="audio-actions">
+          <button type="button" class="link-btn" id="reRecordBtn">Regravar</button>
+          <button type="button" class="link-btn" id="deleteAudioBtn">Excluir áudio</button>
+        </div>
+      </div>
+
+      <h2>Alguma observação?</h2>
+      <p class="sub">Escreva, grave um áudio ou transcreva por voz.</p>
+      <textarea id="inputObs" placeholder="Ex: interessado na linha premium, pediu orçamento..."></textarea>
+    </section>
+
+    <!-- CARD 6 — Revisão -->
+    <section class="card" data-field="revisao" id="card-revisao">
+      <div class="step"><span class="num">6</span><span class="label">Etapa 6 de 6<small>Confirmar</small></span></div>
+      <h2>Confira antes de enviar</h2>
+      <p class="sub">Toque em "Cadastrar" para salvar esta visita.</p>
+
+      <div class="review-item" data-target="card-nome">
+        <div class="text-col">
+          <div class="lbl">Nome</div>
+          <div class="val" id="revNome">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-empresa">
+        <div class="text-col">
+          <div class="lbl">Empresa</div>
+          <div class="val" id="revEmpresa">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-telefones">
+        <div class="text-col">
+          <div class="lbl">Telefones</div>
+          <div class="val" id="revTelefones">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-email">
+        <div class="text-col">
+          <div class="lbl">E-mail</div>
+          <div class="val" id="revEmail">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-observacoes">
+        <div class="text-col">
+          <div class="lbl">Observações</div>
+          <div class="val" id="revObs">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-observacoes">
+        <div class="text-col">
+          <div class="lbl">Áudio</div>
+          <div class="val" id="revAudio">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div class="review-item" data-target="card-nome">
+        <div class="text-col">
+          <div class="lbl">Fotos</div>
+          <div class="val" id="revFotos">—</div>
+        </div>
+        <div class="edit-chevron">Editar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD 6 — Sucesso (oculto até envio) -->
+    <section class="card" data-field="sucesso" id="card-sucesso" style="display:none">
+      <div class="success-box">
+        <div class="check">✓</div>
+        <h2 style="margin:0">Visita cadastrada!</h2>
+        <p class="sub" style="margin:0">Os dados foram enviados com sucesso.</p>
+        <p class="sub" id="successCountdown" style="margin:0;font-weight:600">Voltando ao início em 3s...</p>
+        <button type="button" class="btn btn-primary" id="newVisitBtn" style="margin-top:10px;padding:14px 26px;flex:none">Cadastrar nova visita agora</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="bottom-bar" id="bottomBar">
+    <div class="submit-error" id="submitError"></div>
+    <div class="controls" id="controls">
+      <button type="button" class="btn btn-ghost" id="backBtn">← Voltar</button>
+      <button type="button" class="btn btn-primary" id="nextBtn">Avançar →</button>
+    </div>
+  </div>
+
+  <!-- input de câmera compartilhado por todos os botões de foto -->
+  <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+</div>
+
+<script type="module">
+/* ======================================================
+   CONFIGURAÇÃO DO SUPABASE
+   Troque pelos dados do seu projeto (Settings > API).
+   O restante do formulário funciona normalmente mesmo
+   antes de configurar isso — o erro só aparece ao tentar
+   enviar (Cadastrar), para não travar o resto da página.
+   ====================================================== */
+const SUPABASE_URL = 'COLE_AQUI_A_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'COLE_AQUI_A_SUPABASE_ANON_KEY';
+const AUDIO_BUCKET = 'observacoes-audio'; // bucket público de Storage
+const PHOTO_BUCKET = 'fotos-cartoes'; // bucket público de Storage para fotos de cartões
+
+let supabase = null;
+function getSupabase(){
+  if(supabase) return supabase;
+  if(!SUPABASE_URL || SUPABASE_URL.startsWith('COLE_AQUI') || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.startsWith('COLE_AQUI')){
+    throw new Error('Configure a SUPABASE_URL e a SUPABASE_ANON_KEY no início do arquivo.');
+  }
+  supabase = window.__supabaseClient;
+  return supabase;
+}
+
+// Carrega o SDK do Supabase de forma isolada, sem travar o resto do script
+// caso a URL ainda não tenha sido configurada.
+const supabaseReady = import('https://esm.sh/@supabase/supabase-js@2')
+  .then(({ createClient }) => {
+    if(!SUPABASE_URL.startsWith('COLE_AQUI') && !SUPABASE_ANON_KEY.startsWith('COLE_AQUI')){
+      window.__supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+  })
+  .catch(() => { /* sem internet ou SDK indisponível — tratado no envio */ });
+
+/* ---------------- Estado ---------------- */
+const state = {
+  audioBlob: null,
+  mediaRecorder: null,
+  chunks: [],
+  recording: false,
+  photos: [], // { id, blob, url }
+  editingFromReview: null, // id do card sendo editado a partir da revisão
+};
+
+const deck = document.getElementById('deck');
+const cards = () => Array.from(deck.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
+const dotsEl = document.getElementById('dots');
+const countLabel = document.getElementById('countLabel');
+const backBtn = document.getElementById('backBtn');
+const nextBtn = document.getElementById('nextBtn');
+const controls = document.getElementById('controls');
+const submitError = document.getElementById('submitError');
+const bottomBar = document.getElementById('bottomBar');
+
+// Mantém a barra de botões E o campo em edição sempre visíveis acima do
+// teclado do celular (no iOS/Android o teclado sobrepõe elementos fixos
+// e pode esconder o campo que está sendo digitado sem isso).
+function scrollFieldAboveKeyboard(el){
+  if(!el) return;
+  const card = el.closest('.card');
+  if(!card) return;
+  // rola somente o eixo vertical do card (nunca o carrossel horizontal),
+  // para não interferir na navegação entre cards.
+  requestAnimationFrame(() => {
+    const cardRect = card.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const target = card.scrollTop + (elRect.top - cardRect.top) - (cardRect.height / 2) + (elRect.height / 2);
+    card.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+  });
+}
+
+if(window.visualViewport){
+  const vv = window.visualViewport;
+  function adjustForKeyboard(){
+    const keyboardOffset = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+    bottomBar.style.transform = keyboardOffset > 1 ? `translateY(-${keyboardOffset}px)` : '';
+    const active = document.activeElement;
+    if(keyboardOffset > 1 && active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')){
+      scrollFieldAboveKeyboard(active);
+    }
+  }
+  vv.addEventListener('resize', adjustForKeyboard);
+  vv.addEventListener('scroll', adjustForKeyboard);
+}
+
+// garante que o campo tocado suba acima do teclado assim que recebe foco
+deck.addEventListener('focusin', (e) => {
+  const el = e.target;
+  if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'){
+    setTimeout(() => scrollFieldAboveKeyboard(el), 280);
+  }
+});
+
+let current = 0;
+
+function buildDots(){
+  dotsEl.innerHTML = '';
+  cards().forEach(() => {
+    const s = document.createElement('span');
+    dotsEl.appendChild(s);
+  });
+}
+buildDots();
+
+function updateChrome(){
+  const list = cards();
+  const total = list.length;
+  countLabel.textContent = String(current + 1).padStart(2,'0') + ' / ' + String(total).padStart(2,'0');
+  Array.from(dotsEl.children).forEach((d,i) => {
+    d.classList.toggle('done', i < current);
+    d.classList.toggle('active', i === current);
+  });
+  backBtn.style.visibility = current === 0 ? 'hidden' : 'visible';
+  const isReview = list[current].id === 'card-revisao';
+  const isSuccess = list[current].id === 'card-sucesso';
+  const isEditingThis = state.editingFromReview === list[current].id;
+  if(isSuccess){
+    controls.style.display = 'none';
+  } else {
+    controls.style.display = 'flex';
+    if(isReview){
+      nextBtn.textContent = 'Cadastrar ✓';
+      nextBtn.className = 'btn btn-final';
+    } else if(isEditingThis){
+      nextBtn.textContent = 'Salvar e voltar ✓';
+      nextBtn.className = 'btn btn-primary';
+    } else {
+      nextBtn.textContent = 'Avançar →';
+      nextBtn.className = 'btn btn-primary';
+    }
+  }
+}
+
+function goTo(index){
+  const list = cards();
+  index = Math.max(0, Math.min(index, list.length - 1));
+  current = index;
+  list[current].scrollIntoView({behavior:'smooth', inline:'start', block:'nearest'});
+  updateChrome();
+}
+
+// mantém o estado sincronizado ao arrastar/deslizar manualmente
+let scrollTimeout;
+deck.addEventListener('scroll', () => {
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    const list = cards();
+    const idx = list.findIndex(c => Math.abs(c.getBoundingClientRect().left - deck.getBoundingClientRect().left) < 20);
+    if(idx !== -1 && idx !== current){
+      current = idx;
+      updateChrome();
+    }
+  }, 90);
+});
+
+function showFieldError(cardEl, show){
+  cardEl.classList.toggle('field-error', show);
+  if(show){
+    cardEl.classList.add('shake');
+    setTimeout(() => cardEl.classList.remove('shake'), 500);
+  }
+}
+
+/* ---------------- Navegação (botões) ----------------
+   Fica logo no início do script, de propósito: mesmo que algum
+   recurso mais abaixo (áudio, foto, transcrição, Supabase) falhe,
+   os botões de Avançar/Voltar/Cadastrar continuam funcionando. */
+backBtn.addEventListener('click', () => goTo(current - 1));
+
+nextBtn.addEventListener('click', () => {
+  const list = cards();
+  const activeCard = list[current];
+
+  if(activeCard.id === 'card-nome'){
+    const val = document.getElementById('inputNome').value.trim();
+    showFieldError(activeCard, !val);
+    if(!val) return;
+  }
+
+  if(activeCard.id === 'card-telefones' && state.editingFromReview === 'card-telefones'){
+    // ao voltar da edição, exige ao menos um telefone preenchido
+    if(getPhones().length === 0){
+      showFieldError(activeCard, true);
+      return;
+    }
+  }
+
+  if(activeCard.id === 'card-revisao'){
+    submitVisit();
+    return;
+  }
+
+  // se o card atual estava sendo editado a partir da revisão, volta direto pra lá
+  if(state.editingFromReview === activeCard.id){
+    state.editingFromReview = null;
+    goTo(list.findIndex(c => c.id === 'card-revisao'));
+    return;
+  }
+
+  goTo(current + 1);
+});
+
+/* ---------------- Telefones dinâmicos ---------------- */
+const phoneList = document.getElementById('phoneList');
+let phoneCount = 0;
+
+function addPhoneRow(value = ''){
+  phoneCount++;
+  const row = document.createElement('div');
+  row.className = 'phone-row';
+  row.innerHTML = `
+    <input type="tel" inputmode="tel" placeholder="(11) 91234-5678" value="${value}">
+    <button type="button" class="btn-icon remove" aria-label="Remover número">✕</button>
+  `;
+  const removeBtn = row.querySelector('.remove');
+  removeBtn.addEventListener('click', () => {
+    if(phoneList.children.length > 1){
+      row.remove();
+    } else {
+      row.querySelector('input').value = '';
+    }
+  });
+  phoneList.appendChild(row);
+}
+addPhoneRow();
+document.getElementById('addPhoneBtn').addEventListener('click', () => addPhoneRow());
+
+function getPhones(){
+  return Array.from(phoneList.querySelectorAll('input'))
+    .map(i => i.value.trim())
+    .filter(Boolean);
+}
+
+/* ---------------- Áudio ---------------- */
+const micBtn = document.getElementById('micBtn');
+const micIcon = document.getElementById('micIcon');
+const waveform = document.getElementById('waveform');
+const MIC_SVG = `<path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/>`;
+const STOP_SVG = `<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>`;
+const audioStatusText = document.getElementById('audioStatusText');
+const audioStatusSub = document.getElementById('audioStatusSub');
+const audioPlayer = document.getElementById('audioPlayer');
+const audioResult = document.getElementById('audioResult');
+
+let recordStart = 0;
+let timerInterval = null;
+
+function fmtTime(ms){
+  const s = Math.floor(ms/1000);
+  return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+
+async function startRecording(){
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    audioStatusSub.textContent = 'Gravação de áudio não suportada neste navegador.';
+    return;
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    state.chunks = [];
+    state.mediaRecorder = new MediaRecorder(stream);
+    state.mediaRecorder.ondataavailable = e => { if(e.data.size > 0) state.chunks.push(e.data); };
+    state.mediaRecorder.onstop = () => {
+      state.audioBlob = new Blob(state.chunks, { type: 'audio/webm' });
+      audioPlayer.src = URL.createObjectURL(state.audioBlob);
+      audioResult.style.display = 'block';
+      audioStatusText.textContent = 'Áudio gravado ✓';
+      audioStatusSub.textContent = 'Toque para ouvir ou regravar abaixo';
+      stream.getTracks().forEach(t => t.stop());
+    };
+    state.mediaRecorder.start();
+    state.recording = true;
+    recordStart = Date.now();
+    micBtn.classList.add('recording');
+    micIcon.innerHTML = STOP_SVG;
+    waveform.classList.add('active');
+    audioStatusText.textContent = 'Gravando...';
+    timerInterval = setInterval(() => {
+      audioStatusSub.textContent = fmtTime(Date.now() - recordStart);
+    }, 250);
+  } catch(err){
+    audioStatusSub.textContent = 'Permissão de microfone negada.';
+  }
+}
+
+function stopRecording(){
+  if(state.mediaRecorder && state.recording){
+    state.mediaRecorder.stop();
+    state.recording = false;
+    micBtn.classList.remove('recording');
+    micIcon.innerHTML = MIC_SVG;
+    waveform.classList.remove('active');
+    clearInterval(timerInterval);
+  }
+}
+
+micBtn.addEventListener('click', () => {
+  if(state.recording){ stopRecording(); } else { startRecording(); }
+});
+
+document.getElementById('reRecordBtn').addEventListener('click', () => {
+  state.audioBlob = null;
+  audioResult.style.display = 'none';
+  audioStatusText.textContent = 'Gravar áudio';
+  audioStatusSub.textContent = 'Toque no quadrado para começar';
+  startRecording();
+});
+
+document.getElementById('deleteAudioBtn').addEventListener('click', () => {
+  state.audioBlob = null;
+  audioResult.style.display = 'none';
+  audioStatusText.textContent = 'Gravar áudio';
+  audioStatusSub.textContent = 'Toque no quadrado para começar';
+});
+
+/* ---------------- Transcrever áudio em texto (voz → texto) ---------------- */
+const transcribeBtn = document.getElementById('transcribeBtn');
+const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isListening = false;
+
+function startTranscription(){
+  if(!SpeechRecognitionImpl){
+    audioStatusSub.textContent = 'Transcrição de voz não é suportada neste navegador.';
+    return;
+  }
+  if(state.recording) stopRecording();
+
+  recognition = new SpeechRecognitionImpl();
+  recognition.lang = 'pt-BR';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  recognition.onresult = (e) => {
+    let finalText = '';
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      if(e.results[i].isFinal) finalText += e.results[i][0].transcript;
+    }
+    if(finalText.trim()){
+      const ta = document.getElementById('inputObs');
+      ta.value = (ta.value.trim() ? ta.value.trim() + ' ' : '') + finalText.trim();
+      updateReview();
+    }
+  };
+  recognition.onerror = () => { stopTranscription(); };
+  recognition.onend = () => {
+    if(isListening){
+      try{ recognition.start(); } catch(e){ stopTranscription(); }
+    }
+  };
+
+  try{
+    recognition.start();
+    isListening = true;
+    transcribeBtn.classList.add('listening');
+    audioStatusText.textContent = 'Transcrevendo...';
+    audioStatusSub.textContent = 'Fale perto do celular';
+  } catch(e){
+    audioStatusSub.textContent = 'Não foi possível iniciar a transcrição.';
+  }
+}
+
+function stopTranscription(){
+  isListening = false;
+  transcribeBtn.classList.remove('listening');
+  if(recognition){ try{ recognition.stop(); } catch(e){} }
+  audioStatusText.textContent = 'Gravar áudio';
+  audioStatusSub.textContent = 'Toque no quadrado para começar';
+}
+
+transcribeBtn.addEventListener('click', () => {
+  if(isListening){ stopTranscription(); } else { startTranscription(); }
+});
+
+/* ---------------- Fotos (cartões de visita) ---------------- */
+const photoInput = document.getElementById('photoInput');
+
+document.querySelectorAll('[data-camera]').forEach(btn => {
+  btn.addEventListener('click', () => photoInput.click());
+});
+
+function resizePhoto(file, maxDim = 1280, quality = 0.8){
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          if(width > height){ height = Math.round(height * (maxDim / width)); width = maxDim; }
+          else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality);
+      };
+      img.onerror = () => resolve(file);
+      img.src = ev.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+photoInput.addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  photoInput.value = '';
+  if(!file) return;
+  const blob = await resizePhoto(file);
+  const id = 'photo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  const url = URL.createObjectURL(blob);
+  state.photos.push({ id, blob, url });
+  renderPhotoStrips();
+});
+
+function renderPhotoStrips(){
+  document.querySelectorAll('[data-photostrip]').forEach(strip => {
+    strip.innerHTML = '';
+    strip.classList.toggle('has-photos', state.photos.length > 0);
+    state.photos.forEach(p => {
+      const thumb = document.createElement('div');
+      thumb.className = 'photo-thumb';
+      thumb.innerHTML = `<img src="${p.url}" alt="Foto do cartão"><span class="rm" data-id="${p.id}">✕</span>`;
+      thumb.querySelector('.rm').addEventListener('click', () => {
+        const removed = state.photos.find(ph => ph.id === p.id);
+        if(removed) URL.revokeObjectURL(removed.url);
+        state.photos = state.photos.filter(ph => ph.id !== p.id);
+        renderPhotoStrips();
+      });
+      strip.appendChild(thumb);
+    });
+  });
+  updateReview();
+}
+
+
+/* ---------------- Revisão ---------------- */
+function updateReview(){
+  document.getElementById('revNome').textContent = document.getElementById('inputNome').value.trim() || '—';
+  document.getElementById('revEmpresa').textContent = document.getElementById('inputEmpresa').value.trim() || '—';
+
+  const phones = getPhones();
+  const revTel = document.getElementById('revTelefones');
+  revTel.textContent = phones.length ? phones.join(' · ') : 'Nenhum telefone informado';
+  revTel.classList.toggle('empty', phones.length === 0);
+
+  const email = document.getElementById('inputEmail').value.trim();
+  const revEmail = document.getElementById('revEmail');
+  revEmail.textContent = email || 'Nenhum e-mail informado';
+  revEmail.classList.toggle('empty', !email);
+
+  const obs = document.getElementById('inputObs').value.trim();
+  const revObs = document.getElementById('revObs');
+  revObs.textContent = obs || 'Nenhuma observação escrita';
+  revObs.classList.toggle('empty', !obs);
+
+  const revAudio = document.getElementById('revAudio');
+  revAudio.textContent = state.audioBlob ? '🎤 Áudio gravado' : 'Nenhum áudio gravado';
+  revAudio.classList.toggle('empty', !state.audioBlob);
+
+  const revFotos = document.getElementById('revFotos');
+  revFotos.textContent = state.photos.length ? `📷 ${state.photos.length} foto(s) anexada(s)` : 'Nenhuma foto anexada';
+  revFotos.classList.toggle('empty', state.photos.length === 0);
+}
+// recalcula sempre que o usuário chega na revisão
+deck.addEventListener('scroll', updateReview);
+document.getElementById('inputObs').addEventListener('input', updateReview);
+
+// toque em um item da revisão leva de volta ao card correspondente
+document.querySelectorAll('.review-item[data-target]').forEach(item => {
+  item.addEventListener('click', () => {
+    const targetId = item.getAttribute('data-target');
+    const idx = cards().findIndex(c => c.id === targetId);
+    if(idx !== -1){
+      state.editingFromReview = targetId;
+      goTo(idx);
+    }
+  });
+});
+
+/* ---------------- Envio ---------------- */
+async function submitVisit(){
+  const nome = document.getElementById('inputNome').value.trim();
+  const empresa = document.getElementById('inputEmpresa').value.trim();
+  const telefones = getPhones();
+  const email = document.getElementById('inputEmail').value.trim();
+  const observacoes = document.getElementById('inputObs').value.trim();
+
+  if(!nome){
+    goTo(cards().findIndex(c => c.id === 'card-nome'));
+    showFieldError(document.getElementById('card-nome'), true);
+    return;
+  }
+  if(telefones.length === 0){
+    goTo(cards().findIndex(c => c.id === 'card-telefones'));
+    showFieldError(document.getElementById('card-telefones'), true);
+    return;
+  }
+
+  submitError.style.display = 'none';
+  nextBtn.disabled = true;
+  nextBtn.textContent = 'Enviando...';
+
+  try{
+    await supabaseReady;
+    const client = getSupabase();
+    let audio_url = null;
+    const fotos_urls = [];
+
+    if(state.audioBlob){
+      const fileName = `visita-${Date.now()}.webm`;
+      const { error: upErr } = await client.storage
+        .from(AUDIO_BUCKET)
+        .upload(fileName, state.audioBlob, { contentType: 'audio/webm' });
+      if(upErr) throw upErr;
+      const { data: pub } = client.storage.from(AUDIO_BUCKET).getPublicUrl(fileName);
+      audio_url = pub.publicUrl;
+    }
+
+    for(const p of state.photos){
+      const fileName = `foto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+      const { error: upErr } = await client.storage
+        .from(PHOTO_BUCKET)
+        .upload(fileName, p.blob, { contentType: 'image/jpeg' });
+      if(upErr) throw upErr;
+      const { data: pub } = client.storage.from(PHOTO_BUCKET).getPublicUrl(fileName);
+      fotos_urls.push(pub.publicUrl);
+    }
+
+    const { error } = await client.from('visitas').insert({
+      nome,
+      empresa: empresa || null,
+      telefones,
+      email: email || null,
+      observacoes: observacoes || null,
+      audio_url,
+      fotos_urls,
+    });
+    if(error) throw error;
+
+    document.getElementById('card-revisao').style.display = 'none';
+    document.getElementById('card-sucesso').style.display = 'flex';
+    buildDots();
+    goTo(cards().findIndex(c => c.id === 'card-sucesso'));
+    startSuccessCountdown();
+
+  } catch(err){
+    submitError.textContent = 'Não foi possível enviar: ' + (err.message || 'erro desconhecido.');
+    submitError.style.display = 'block';
+  } finally {
+    nextBtn.disabled = false;
+    nextBtn.textContent = 'Cadastrar ✓';
+  }
+}
+
+let successTimer = null;
+function startSuccessCountdown(){
+  let secondsLeft = 3;
+  const countdownEl = document.getElementById('successCountdown');
+  countdownEl.textContent = `Voltando ao início em ${secondsLeft}s...`;
+  successTimer = setInterval(() => {
+    secondsLeft -= 1;
+    if(secondsLeft <= 0){
+      clearInterval(successTimer);
+      successTimer = null;
+      resetForm();
+    } else {
+      countdownEl.textContent = `Voltando ao início em ${secondsLeft}s...`;
+    }
+  }, 1000);
+}
+
+function resetForm(){
+  if(successTimer){ clearInterval(successTimer); successTimer = null; }
+
+  document.getElementById('inputNome').value = '';
+  document.getElementById('inputEmpresa').value = '';
+  document.getElementById('inputEmail').value = '';
+  document.getElementById('inputObs').value = '';
+  phoneList.innerHTML = '';
+  addPhoneRow();
+
+  if(state.recording) stopRecording();
+  if(isListening) stopTranscription();
+  state.audioBlob = null;
+  audioPlayer.removeAttribute('src');
+  audioResult.style.display = 'none';
+  audioStatusText.textContent = 'Gravar áudio';
+  audioStatusSub.textContent = 'Toque no quadrado para começar';
+  micIcon.innerHTML = MIC_SVG;
+  waveform.classList.remove('active');
+
+  state.photos.forEach(p => URL.revokeObjectURL(p.url));
+  state.photos = [];
+  renderPhotoStrips();
+
+  showFieldError(document.getElementById('card-nome'), false);
+  showFieldError(document.getElementById('card-telefones'), false);
+  submitError.style.display = 'none';
+  state.editingFromReview = null;
+
+  document.getElementById('card-sucesso').style.display = 'none';
+  document.getElementById('card-revisao').style.display = 'flex';
+  buildDots();
+  goTo(0);
+}
+
+document.getElementById('newVisitBtn').addEventListener('click', resetForm);
+
+updateChrome();
+</script>
+</body>
+</html>
