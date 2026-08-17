@@ -293,8 +293,8 @@
     font-size:16px;line-height:1;
   }
 
-  /* ---------- Botões quadrados compactos (mic, transcrever, câmera) ---------- */
-  .mic-square,.transcribe-square,.camera-square{
+  /* ---------- Botões quadrados compactos (mic, câmera) ---------- */
+  .mic-square,.camera-square{
     width:44px;height:44px;
     flex-shrink:0;
     border-radius:12px;
@@ -305,7 +305,7 @@
     cursor:pointer;
     transition:background .15s, transform .15s;
   }
-  .mic-square.recording,.transcribe-square.listening{
+  .mic-square.recording{
     background:var(--red-dark);
     animation:pulse 1.2s infinite;
   }
@@ -314,11 +314,7 @@
     70%{box-shadow:0 0 0 10px rgba(92,20,20,0);}
     100%{box-shadow:0 0 0 0 rgba(92,20,20,0);}
   }
-  .mic-square svg,.transcribe-square svg,.camera-square svg{width:20px;height:20px;display:block;}
-  .transcribe-square.unsupported{
-    background:#C79A98;
-    cursor:not-allowed;
-  }
+  .mic-square svg,.camera-square svg{width:20px;height:20px;display:block;}
 
   /* ---------- Fotos: tira de miniaturas ---------- */
   .photo-strip{
@@ -431,10 +427,8 @@
     #card-observacoes textarea{min-height:42px;padding:12px;font-size:17px;}
     #card-observacoes .audio-status-line{margin-top:6px;margin-bottom:6px;}
     #card-observacoes .mic-square,
-    #card-observacoes .transcribe-square,
     #card-observacoes .camera-square{width:38px;height:38px;border-radius:10px;}
     #card-observacoes .mic-square svg,
-    #card-observacoes .transcribe-square svg,
     #card-observacoes .camera-square svg{width:17px;height:17px;}
   }
 
@@ -756,9 +750,6 @@
               <line x1="9" y1="22" x2="15" y2="22"/>
             </svg>
           </button>
-          <button type="button" class="transcribe-square" id="transcribeBtn" aria-label="Transcrever áudio em texto">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/></svg>
-          </button>
           <button type="button" class="camera-square" data-camera aria-label="Tirar foto do cartão">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
           </button>
@@ -785,7 +776,7 @@
       </div>
 
       <h2>Alguma observação?</h2>
-      <p class="sub">Escreva, grave um áudio ou transcreva por voz.</p>
+      <p class="sub">Escreva ou grave um áudio.</p>
       <textarea id="inputObs" placeholder="Ex: interessado na linha premium, pediu orçamento..."></textarea>
     </section>
 
@@ -1017,23 +1008,32 @@ const state = {
 };
 
 /* ---------------- Número sequencial do cadastro ----------------
-   Guardado no navegador (localStorage), incrementa a cada novo
-   cadastro iniciado neste aparelho. */
-function nextSequentialNumber(){
+   Guardado no navegador (localStorage). Só avança quando um cadastro
+   é efetivamente concluído — recarregar a página não altera o número. */
+function seqCountAtual(){
   let n = 0;
   try{
     n = parseInt(localStorage.getItem('visitaSeqCounter') || '0', 10);
     if(Number.isNaN(n)) n = 0;
   } catch(e){ n = 0; }
-  n += 1;
-  try{ localStorage.setItem('visitaSeqCounter', String(n)); } catch(e){ /* ignora se indisponível */ }
   return n;
+}
+function seqNumeroAtual(){
+  // número do cadastro em andamento (ainda não concluído) — apenas leitura
+  return seqCountAtual() + 1;
+}
+function seqAvancar(){
+  // chamado só depois de um cadastro concluído: marca esse número como
+  // usado e retorna o próximo número para o cadastro seguinte
+  const n = seqCountAtual() + 1;
+  try{ localStorage.setItem('visitaSeqCounter', String(n)); } catch(e){ /* ignora se indisponível */ }
+  return n + 1;
 }
 function updateSeqBadges(){
   const label = 'Cadastro nº ' + String(state.seqNumber).padStart(3, '0');
   document.querySelectorAll('[data-seqbadge]').forEach(el => { el.textContent = label; });
 }
-if(!isAdminMode) state.seqNumber = nextSequentialNumber();
+if(!isAdminMode) state.seqNumber = seqNumeroAtual();
 
 const deck = document.getElementById('deck');
 const cards = () => Array.from(deck.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
@@ -1156,7 +1156,7 @@ function showFieldError(cardEl, show){
 
 /* ---------------- Navegação (botões) ----------------
    Fica logo no início do script, de propósito: mesmo que algum
-   recurso mais abaixo (áudio, foto, transcrição, Supabase) falhe,
+   recurso mais abaixo (áudio, foto, Supabase) falhe,
    os botões de Avançar/Voltar/Cadastrar continuam funcionando. */
 backBtn.addEventListener('click', () => goTo(current - 1));
 
@@ -1248,7 +1248,6 @@ async function startRecording(){
     audioStatusSub.textContent = 'Gravação de áudio não suportada neste navegador.';
     return;
   }
-  if(isListening) stopTranscription(); // evita os dois disputarem o microfone ao mesmo tempo
   try{
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     state.chunks = [];
@@ -1305,107 +1304,6 @@ document.getElementById('deleteAudioBtn').addEventListener('click', () => {
   audioResult.style.display = 'none';
   audioStatusText.textContent = '';
   audioStatusSub.textContent = '';
-});
-
-/* ---------------- Transcrever áudio em texto (voz → texto) ---------------- */
-const transcribeBtn = document.getElementById('transcribeBtn');
-const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
-let isListening = false;
-
-// Se o navegador não suporta a API de voz (ex: iPhone/Safari não suporta),
-// avisa isso de forma visível e desativa o botão, em vez de deixá-lo
-// clicável sem funcionar.
-if(!SpeechRecognitionImpl){
-  transcribeBtn.classList.add('unsupported');
-  transcribeBtn.setAttribute('aria-disabled', 'true');
-}
-
-function transcriptionError(message){
-  isListening = false;
-  transcribeBtn.classList.remove('listening');
-  if(recognition){ try{ recognition.abort(); } catch(e){} }
-  recognition = null;
-  audioStatusText.textContent = 'Transcrição indisponível';
-  audioStatusSub.textContent = message;
-}
-
-function startTranscription(){
-  if(!SpeechRecognitionImpl){
-    audioStatusText.textContent = 'Transcrição indisponível';
-    audioStatusSub.textContent = 'Este navegador não suporta transcrição por voz (comum no iPhone/Safari). Grave o áudio ou digite manualmente.';
-    return;
-  }
-  if(state.recording) stopRecording();
-
-  recognition = new SpeechRecognitionImpl();
-  recognition.lang = 'pt-BR';
-  recognition.continuous = true;
-  recognition.interimResults = false;
-
-  recognition.onresult = (e) => {
-    let finalText = '';
-    for(let i = e.resultIndex; i < e.results.length; i++){
-      if(e.results[i].isFinal) finalText += e.results[i][0].transcript;
-    }
-    if(finalText.trim()){
-      const ta = document.getElementById('inputObs');
-      ta.value = (ta.value.trim() ? ta.value.trim() + ' ' : '') + finalText.trim();
-      updateReview();
-    }
-  };
-
-  recognition.onerror = (e) => {
-    const code = e && e.error;
-    // 'no-speech' e 'aborted' não são falhas reais — o onend cuida de retomar
-    if(code === 'no-speech' || code === 'aborted') return;
-    const messages = {
-      'not-allowed': 'Permissão de microfone negada. Ative o microfone nas configurações do navegador e tente novamente.',
-      'service-not-allowed': 'Permissão de microfone negada. Ative o microfone nas configurações do navegador e tente novamente.',
-      'network': 'Sem conexão com a internet — a transcrição por voz precisa estar online.',
-      'audio-capture': 'Nenhum microfone encontrado neste aparelho.',
-    };
-    transcriptionError(messages[code] || ('Erro na transcrição (' + (code || 'desconhecido') + '). Tente novamente.'));
-  };
-
-  recognition.onend = () => {
-    if(isListening){
-      // mantém a escuta contínua reiniciando após pausas naturais da fala
-      setTimeout(() => {
-        if(!isListening) return;
-        try{
-          recognition.start();
-        } catch(e){
-          // não conseguiu retomar — encerra de forma visível em vez de
-          // deixar a tela presa em "Transcrevendo..." sem funcionar de fato
-          transcriptionError('A transcrição parou. Toque no ícone para tentar novamente.');
-        }
-      }, 150);
-    }
-  };
-
-  try{
-    recognition.start();
-    isListening = true;
-    transcribeBtn.classList.add('listening');
-    audioStatusText.textContent = 'Transcrevendo...';
-    audioStatusSub.textContent = 'Fale perto do celular · toque novamente para parar';
-  } catch(e){
-    transcriptionError('Não foi possível iniciar a transcrição. Tente novamente.');
-  }
-}
-
-function stopTranscription(){
-  isListening = false;
-  transcribeBtn.classList.remove('listening');
-  if(recognition){ try{ recognition.stop(); } catch(e){} }
-  audioStatusText.textContent = '';
-  audioStatusSub.textContent = '';
-}
-
-transcribeBtn.addEventListener('click', () => {
-  if(transcribeBtn.classList.contains('unsupported')) return;
-  if(isListening){ stopTranscription(); } else { startTranscription(); }
 });
 
 /* ---------------- Fotos (cartões de visita) ---------------- */
@@ -1618,7 +1516,6 @@ function resetForm(){
   addPhoneRow();
 
   if(state.recording) stopRecording();
-  if(isListening) stopTranscription();
   state.audioBlob = null;
   audioPlayer.removeAttribute('src');
   audioResult.style.display = 'none';
@@ -1636,7 +1533,7 @@ function resetForm(){
   submitError.style.display = 'none';
   state.editingFromReview = null;
 
-  state.seqNumber = nextSequentialNumber();
+  state.seqNumber = seqAvancar();
   updateSeqBadges();
 
   document.getElementById('card-sucesso').style.display = 'none';
