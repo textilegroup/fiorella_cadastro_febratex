@@ -938,6 +938,9 @@ function getSupabase(){
     throw new Error('Configure a SUPABASE_URL e a SUPABASE_ANON_KEY no início do arquivo.');
   }
   supabase = window.__supabaseClient;
+  if(!supabase){
+    throw new Error('Não foi possível carregar a biblioteca do Supabase. Verifique sua conexão com a internet e tente novamente.');
+  }
   return supabase;
 }
 
@@ -1194,6 +1197,7 @@ async function startRecording(){
     audioStatusSub.textContent = 'Gravação de áudio não suportada neste navegador.';
     return;
   }
+  if(isListening) stopTranscription(); // evita os dois disputarem o microfone ao mesmo tempo
   try{
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     state.chunks = [];
@@ -1318,7 +1322,13 @@ function startTranscription(){
       // mantém a escuta contínua reiniciando após pausas naturais da fala
       setTimeout(() => {
         if(!isListening) return;
-        try{ recognition.start(); } catch(e){ /* já iniciado — ignora */ }
+        try{
+          recognition.start();
+        } catch(e){
+          // não conseguiu retomar — encerra de forma visível em vez de
+          // deixar a tela presa em "Transcrevendo..." sem funcionar de fato
+          transcriptionError('A transcrição parou. Toque no ícone para tentar novamente.');
+        }
       }, 150);
     }
   };
