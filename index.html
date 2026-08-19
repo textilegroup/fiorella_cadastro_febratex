@@ -545,6 +545,25 @@
     color:#fff;
   }
   .btn:active{transform:scale(0.98);}
+  .skip-row{
+    flex-shrink:0;
+    padding:0 20px 10px;
+    display:none;
+  }
+  .skip-row.visible{display:block;}
+  .btn-skip{
+    width:100%;
+    border:none;
+    border-radius:16px;
+    padding:14px 16px;
+    font-family:'Plus Jakarta Sans',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    background:var(--success-green);
+    color:#fff;
+  }
+  .btn-skip:active{transform:scale(0.98);}
   .submit-error{
     color:var(--red);
     font-size:13px;
@@ -676,9 +695,9 @@
       </div>
       <div class="photo-strip" data-photostrip></div>
       <h2>Nome do visitante</h2>
-      <p class="sub">Nome completo de quem passou pelo estande.</p>
+      <p class="sub">Nome completo de quem passou pelo estande. Se preferir, tire uma foto do cartão de visita e avance.</p>
       <input type="text" id="inputNome" placeholder="Ex: Ana Ribeiro" autocomplete="name">
-      <div class="error-msg">Preencha o nome para continuar.</div>
+      <div class="error-msg">Preencha ao menos uma informação (nome, empresa, telefone, e-mail, observação, foto do cartão ou áudio) antes de continuar.</div>
       <a href="?admin" class="admin-access-link admin-access-link-fixed">Área administrativa</a>
     </section>
 
@@ -711,12 +730,11 @@
       </div>
       <div class="photo-strip" data-photostrip></div>
       <h2>Telefone de contato</h2>
-      <p class="sub">Adicione quantos números forem necessários.</p>
+      <p class="sub">Adicione quantos números forem necessários, se tiver.</p>
       <div id="phoneList"></div>
       <button type="button" class="add-phone" id="addPhoneBtn">
         <span class="plus">+</span> Adicionar outro número
       </button>
-      <div class="error-msg" id="phoneError">Adicione ao menos um telefone.</div>
     </section>
 
     <!-- CARD 4 — E-mail -->
@@ -731,7 +749,7 @@
         </div>
       </div>
       <div class="photo-strip" data-photostrip></div>
-      <h2>E-mail de contato (opcional)</h2>
+      <h2>E-mail de contato</h2>
       <p class="sub">Opcional — pode deixar em branco se não tiver.</p>
       <input type="email" id="inputEmail" placeholder="Ex: ana@empresa.com.br" autocomplete="email" inputmode="email">
     </section>
@@ -775,7 +793,7 @@
         </div>
       </div>
 
-      <h2>Alguma observação?</h2>
+      <h2>Observações</h2>
       <p class="sub">Escreva ou grave um áudio.</p>
       <textarea id="inputObs" placeholder="Ex: interessado na linha premium, pediu orçamento..."></textarea>
     </section>
@@ -869,6 +887,9 @@
 
   <div class="bottom-bar" id="bottomBar">
     <div class="submit-error" id="submitError"></div>
+    <div class="skip-row" id="skipRow">
+      <button type="button" class="btn-skip" id="skipToEndBtn">Avançar para o fim</button>
+    </div>
     <div class="controls" id="controls">
       <button type="button" class="btn btn-ghost" id="backBtn">← Voltar</button>
       <button type="button" class="btn btn-primary" id="nextBtn">Avançar →</button>
@@ -925,9 +946,11 @@
    UMA vez no seu projeto (menu SQL Editor > New query):
 
    -- Tabela de cadastros da feira
+   -- (nenhum campo é obrigatório no formulário — inclusive "nome" agora
+   -- pode ir vazio, por isso a coluna abaixo NÃO tem "not null")
    create table if not exists public.visitas (
      id uuid primary key default gen_random_uuid(),
-     nome text not null,
+     nome text,
      empresa text,
      telefones text[] not null default '{}',
      email text,
@@ -936,6 +959,10 @@
      fotos_urls text[] default '{}',
      criado_em timestamptz not null default now()
    );
+
+   -- Se a tabela "visitas" já existia antes (com "nome not null"),
+   -- rode esta linha uma vez para permitir nome em branco:
+   -- alter table public.visitas alter column nome drop not null;
 
    alter table public.visitas enable row level security;
 
@@ -1043,6 +1070,8 @@ const backBtn = document.getElementById('backBtn');
 const nextBtn = document.getElementById('nextBtn');
 const controls = document.getElementById('controls');
 const submitError = document.getElementById('submitError');
+const skipRow = document.getElementById('skipRow');
+const skipToEndBtn = document.getElementById('skipToEndBtn');
 const bottomBar = document.getElementById('bottomBar');
 
 // Mantém a barra de botões E o campo em edição sempre visíveis acima do
@@ -1122,6 +1151,11 @@ function updateChrome(){
       nextBtn.className = 'btn btn-primary';
     }
   }
+
+  // botão "Avançar para o fim": só aparece nas etapas 1 a 5 (não na
+  // revisão, na tela de sucesso, nem quando editando um campo a partir
+  // da revisão, onde o fluxo já é outro)
+  skipRow.classList.toggle('visible', !isSuccess && !isReview && !isEditingThis);
 }
 
 function goTo(index){
@@ -1164,19 +1198,10 @@ nextBtn.addEventListener('click', () => {
   const list = cards();
   const activeCard = list[current];
 
-  if(activeCard.id === 'card-nome'){
-    const val = document.getElementById('inputNome').value.trim();
-    showFieldError(activeCard, !val);
-    if(!val) return;
-  }
-
-  if(activeCard.id === 'card-telefones' && state.editingFromReview === 'card-telefones'){
-    // ao voltar da edição, exige ao menos um telefone preenchido
-    if(getPhones().length === 0){
-      showFieldError(activeCard, true);
-      return;
-    }
-  }
+  // Nenhum campo é obrigatório para avançar de etapa — inclusive quando o
+  // visitante só tira uma foto do cartão de visita, sem digitar nada.
+  // O único bloqueio de fato acontece no envio final (submitVisit),
+  // caso NENHUMA informação tenha sido preenchida em todo o formulário.
 
   if(activeCard.id === 'card-revisao'){
     submitVisit();
@@ -1414,6 +1439,37 @@ document.querySelectorAll('.review-item[data-target]').forEach(item => {
 });
 
 /* ---------------- Envio ---------------- */
+// Nenhum campo isolado é obrigatório — o formulário só é considerado
+// vazio se não houver texto algum, nem telefone, nem áudio, nem foto
+// do cartão de visita. Usado tanto no envio final quanto no botão
+// "Avançar para o fim".
+function formHasAnyInfo(){
+  const nome = document.getElementById('inputNome').value.trim();
+  const empresa = document.getElementById('inputEmpresa').value.trim();
+  const telefones = getPhones();
+  const email = document.getElementById('inputEmail').value.trim();
+  const observacoes = document.getElementById('inputObs').value.trim();
+  return !!nome || !!empresa || telefones.length > 0 || !!email ||
+    !!observacoes || !!state.audioBlob || state.photos.length > 0;
+}
+
+function blockEmptyForm(){
+  goTo(cards().findIndex(c => c.id === 'card-nome'));
+  showFieldError(document.getElementById('card-nome'), true);
+  submitError.textContent = 'Preencha ao menos uma informação (ou anexe uma foto ou áudio) antes de continuar.';
+  submitError.style.display = 'block';
+}
+
+skipToEndBtn.addEventListener('click', () => {
+  if(!formHasAnyInfo()){
+    blockEmptyForm();
+    return;
+  }
+  submitError.style.display = 'none';
+  showFieldError(document.getElementById('card-nome'), false);
+  goTo(cards().findIndex(c => c.id === 'card-revisao'));
+});
+
 async function submitVisit(){
   const nome = document.getElementById('inputNome').value.trim();
   const empresa = document.getElementById('inputEmpresa').value.trim();
@@ -1421,18 +1477,13 @@ async function submitVisit(){
   const email = document.getElementById('inputEmail').value.trim();
   const observacoes = document.getElementById('inputObs').value.trim();
 
-  if(!nome){
-    goTo(cards().findIndex(c => c.id === 'card-nome'));
-    showFieldError(document.getElementById('card-nome'), true);
-    return;
-  }
-  if(telefones.length === 0){
-    goTo(cards().findIndex(c => c.id === 'card-telefones'));
-    showFieldError(document.getElementById('card-telefones'), true);
+  if(!formHasAnyInfo()){
+    blockEmptyForm();
     return;
   }
 
   submitError.style.display = 'none';
+  showFieldError(document.getElementById('card-nome'), false);
   nextBtn.disabled = true;
   nextBtn.textContent = 'Enviando...';
 
@@ -1463,7 +1514,7 @@ async function submitVisit(){
     }
 
     const { error } = await client.from('visitas').insert({
-      nome,
+      nome: nome || null,
       empresa: empresa || null,
       telefones,
       email: email || null,
