@@ -1031,36 +1031,37 @@ const state = {
   recording: false,
   photos: [], // { id, blob, url }
   editingFromReview: null, // id do card sendo editado a partir da revisão
-  seqNumber: 1,
+  seqNumber: null,
 };
 
 /* ---------------- Número sequencial do cadastro ----------------
-   Guardado no navegador (localStorage). Só avança quando um cadastro
-   é efetivamente concluído — recarregar a página não altera o número. */
-function seqCountAtual(){
-  let n = 0;
-  try{
-    n = parseInt(localStorage.getItem('visitaSeqCounter') || '0', 10);
-    if(Number.isNaN(n)) n = 0;
-  } catch(e){ n = 0; }
-  return n;
-}
-function seqNumeroAtual(){
-  // número do cadastro em andamento (ainda não concluído) — apenas leitura
-  return seqCountAtual() + 1;
-}
-function seqAvancar(){
-  // chamado só depois de um cadastro concluído: marca esse número como
-  // usado e retorna o próximo número para o cadastro seguinte
-  const n = seqCountAtual() + 1;
-  try{ localStorage.setItem('visitaSeqCounter', String(n)); } catch(e){ /* ignora se indisponível */ }
-  return n + 1;
-}
+   O número exibido vem da contagem real de cadastros já salvos no
+   Supabase (tabela "visitas"), e não de um contador local do
+   navegador — assim ele reflete a sequência real de contatos
+   recebidos, igual em qualquer dispositivo usado na feira. */
 function updateSeqBadges(){
-  const label = 'Cadastro nº ' + String(state.seqNumber).padStart(3, '0');
+  const label = state.seqNumber
+    ? 'Cadastro nº ' + String(state.seqNumber).padStart(3, '0')
+    : 'Cadastro nº —';
   document.querySelectorAll('[data-seqbadge]').forEach(el => { el.textContent = label; });
 }
-if(!isAdminMode) state.seqNumber = seqNumeroAtual();
+async function refreshSeqNumber(){
+  try{
+    await supabaseReady;
+    const client = getSupabase();
+    const { count, error } = await client
+      .from('visitas')
+      .select('*', { count: 'exact', head: true });
+    if(error) throw error;
+    state.seqNumber = (count || 0) + 1;
+  } catch(e){
+    // sem internet ou Supabase ainda não configurado: mantém "—" até
+    // conseguir buscar o total real (não travamos o formulário por isso).
+  }
+  updateSeqBadges();
+}
+updateSeqBadges();
+if(!isAdminMode) refreshSeqNumber();
 
 const deck = document.getElementById('deck');
 const cards = () => Array.from(deck.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
@@ -1584,8 +1585,7 @@ function resetForm(){
   submitError.style.display = 'none';
   state.editingFromReview = null;
 
-  state.seqNumber = seqAvancar();
-  updateSeqBadges();
+  refreshSeqNumber();
 
   document.getElementById('card-sucesso').style.display = 'none';
   document.getElementById('card-revisao').style.display = 'flex';
